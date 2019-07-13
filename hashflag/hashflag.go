@@ -6,7 +6,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"twitter-hashflags/utils"
+
+	"github.com/trevorsmiley/fileutils"
 )
 
 type Hashflag struct {
@@ -42,7 +43,7 @@ func (h *Hashflag) GetFileExtension() string {
 
 func (h *Hashflag) Download(dir string) {
 
-	err := utils.DownloadFile(filepath.Join(dir, h.GetFileName()), h.URL.String())
+	err := fileutils.DownloadFile(filepath.Join(dir, h.GetFileName()), h.URL.String())
 	if err != nil {
 		log.Fatal(err)
 	}

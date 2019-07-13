@@ -9,6 +9,8 @@ import (
 	"twitter-hashflags/hashflag"
 	"twitter-hashflags/twitter"
 	"twitter-hashflags/utils"
+
+	"github.com/trevorsmiley/fileutils"
 )
 
 const (
@@ -38,7 +40,7 @@ func main() {
 			fmt.Printf("%s | %s\n%s\n", hf.GetName(), hf.URL.String(), strings.Join(hf.Hashtags, ", "))
 		}
 	case "download":
-		utils.CreateDirIfMissing(hashflagDIR)
+		fileutils.CreateDirIfMissing(hashflagDIR)
 		missingHashflags := filterMissingHashflags(hashflags)
 		fmt.Printf("Syncing %d hashflags to /%s\n", len(missingHashflags), hashflagDIR)
 
@@ -72,7 +74,7 @@ func alphaList(hashflags map[string]hashflag.Hashflag) []string {
 }
 
 func forceDownloadAll(hashflags map[string]hashflag.Hashflag) {
-	err := utils.CreateOrClearDir(hashflagDIR)
+	err := fileutils.CreateOrClearDir(hashflagDIR)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -83,7 +85,7 @@ func forceDownloadAll(hashflags map[string]hashflag.Hashflag) {
 
 func filterMissingHashflags(hashflags map[string]hashflag.Hashflag) []hashflag.Hashflag {
 	filtered := make([]hashflag.Hashflag, 0)
-	filenames, err := utils.GetFileNames(hashflagDIR)
+	filenames, err := fileutils.GetFileNames(hashflagDIR)
 	if err != nil {
 		log.Fatal(err)
 	}
