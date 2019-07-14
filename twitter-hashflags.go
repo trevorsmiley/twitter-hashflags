@@ -2,19 +2,21 @@ package main
 
 import (
 	"fmt"
+	"github.com/cheggaaa/pb/v3"
+	"github.com/trevorsmiley/fileutils"
+	"html/template"
 	"log"
 	"os"
-	"sort"
+	"path"
+	"runtime"
 	"strings"
 	"twitter-hashflags/hashflag"
 	"twitter-hashflags/twitter"
-	"twitter-hashflags/utils"
-
-	"github.com/trevorsmiley/fileutils"
 )
 
 const (
 	hashflagDIR = "downloaded_hashflags"
+	detailsFile = "hashflag-list.txt"
 )
 
 func main() {
@@ -31,70 +33,91 @@ func main() {
 	fmt.Printf("Found %d active hashflags\n", len(hashflags))
 
 	switch op {
-	case "get":
-		for _, name := range alphaList(hashflags) {
-			fmt.Printf("%s\n", name)
-		}
-	case "get-full":
-		for _, hf := range hashflags {
-			fmt.Printf("%s | %s\n%s\n", hf.GetName(), hf.URL.String(), strings.Join(hf.Hashtags, ", "))
-		}
-	case "download":
-		fileutils.CreateDirIfMissing(hashflagDIR)
-		missingHashflags := filterMissingHashflags(hashflags)
-		fmt.Printf("Syncing %d hashflags to /%s\n", len(missingHashflags), hashflagDIR)
-
-		for _, hf := range missingHashflags {
-			fmt.Printf("Downloading '%s' from %s\n", hf.GetFileName(), hf.URL.String())
-			hf.Download(hashflagDIR)
-		}
+	case "list":
+		list(hashflags)
+	case "list-fulldetails":
+		listFullDetails(hashflags)
+	case "sync":
+		sync(hashflags, hashflagDIR)
 	case "force-download":
-		fmt.Printf("Downloading all hashflags to /%s\n", hashflagDIR)
-		forceDownloadAll(hashflags)
-
+		forceDownload(hashflags, hashflagDIR)
 	case "diff":
-		missingHashflags := filterMissingHashflags(hashflags)
-		fmt.Printf("%d Missing hashflags\n", len(missingHashflags))
-		for _, hf := range missingHashflags {
-			fmt.Printf("%s\n", hf.GetFileName())
+		diff(hashflags, hashflagDIR)
+	}
+
+}
+
+func forceDownload(hashflags []hashflag.Hashflag, dir string) {
+	fmt.Printf("Downloading all hashflags to /%s\n", dir)
+	downloadAll(hashflags, true, dir)
+}
+
+func diff(hashflags []hashflag.Hashflag, dir string) {
+	missingHashflags := hashflag.FilterMissingHashflags(hashflags, dir)
+	fmt.Printf("%d Missing hashflags\n", len(missingHashflags))
+	for _, hf := range missingHashflags {
+		fmt.Printf("%s\n", hf.GetFileName())
+	}
+}
+
+func sync(hashflags []hashflag.Hashflag, dir string) {
+	missingHashflags := hashflag.FilterMissingHashflags(hashflags, dir)
+	if len(missingHashflags) > 0 {
+		fmt.Printf("Syncing %d hashflags to /%s\n", len(missingHashflags), dir)
+		downloadAll(missingHashflags, false, dir)
+	} else {
+		fmt.Println("No new hashflags to download")
+	}
+}
+
+func list(hashflags []hashflag.Hashflag) {
+	for _, hf := range hashflags {
+		fmt.Printf("%s\n", hf.GetFileName())
+	}
+}
+
+func listFullDetails(hashflags []hashflag.Hashflag) {
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		log.Fatal("No caller information")
+	}
+	tmpl, err := template.New("hashflags.tmpl").Funcs(template.FuncMap{"StringsJoin": strings.Join}).ParseFiles(path.Dir(filename) + "/hashflag/hashflags.tmpl")
+	if err != nil {
+		log.Fatal("Error with template", err)
+	}
+	f, err := os.Create(detailsFile)
+	if err != nil {
+		log.Fatalf("Couldn't create file %s\n%v", detailsFile, err)
+	}
+	defer func() {
+		err = f.Close()
+		if err != nil {
+			log.Fatal("Couldn't close file", err)
+		}
+	}()
+	fmt.Printf("Writing details to %s\n", detailsFile)
+	err = tmpl.Execute(f, hashflags)
+	if err != nil {
+		log.Fatal("Error executing template", err)
+	}
+}
+
+func downloadAll(hashflags []hashflag.Hashflag, clearDIR bool, dir string) {
+	if clearDIR {
+		err := fileutils.CreateOrClearDir(dir)
+		if err != nil {
+			log.Fatalf("Error with directory %s\n%v", dir, err)
+		}
+	} else {
+		err := fileutils.CreateDirIfMissing(dir)
+		if err != nil {
+			log.Fatalf("Error with directory %s\n%v", dir, err)
 		}
 	}
-
-}
-
-func alphaList(hashflags map[string]hashflag.Hashflag) []string {
-	list := make([]string, 0)
+	bar := pb.StartNew(len(hashflags))
 	for _, hf := range hashflags {
-		list = append(list, hf.GetName())
+		bar.Increment()
+		hf.Download(dir)
 	}
-
-	//case insensitive sort
-	sort.Slice(list, func(i, j int) bool { return strings.ToLower(list[i]) < strings.ToLower(list[j]) })
-	return list
-}
-
-func forceDownloadAll(hashflags map[string]hashflag.Hashflag) {
-	err := fileutils.CreateOrClearDir(hashflagDIR)
-	if err != nil {
-		log.Fatal(err)
-	}
-	for _, hf := range hashflags {
-		hf.Download(hashflagDIR)
-	}
-}
-
-func filterMissingHashflags(hashflags map[string]hashflag.Hashflag) []hashflag.Hashflag {
-	filtered := make([]hashflag.Hashflag, 0)
-	filenames, err := fileutils.GetFileNames(hashflagDIR)
-	if err != nil {
-		log.Fatal(err)
-	}
-	for _, hf := range hashflags {
-		if utils.ContainsString(filenames, hf.GetFileName()) {
-			continue
-		}
-		filtered = append(filtered, hf)
-	}
-	hashflag.SortHashflags(filtered)
-	return filtered
+	bar.Finish()
 }

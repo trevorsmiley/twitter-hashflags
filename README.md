@@ -11,14 +11,14 @@ Shoutout to [@JamieMagee](https://github.com/JamieMagee) and his [HashflagArchiv
 
 Return a list of active hashflags
 ```bash
-./twitter-hashflags get
+./twitter-hashflags list
 ```
 
 ### Get hashflag list with full details
 
 Return a list of active hashflags with full details
 ```bash
-./twitter-hashflags get-full
+./twitter-hashflags list-fulldetails
 ```
 
 ### List missing hashflags
@@ -34,7 +34,7 @@ Sync hashflags with the `downloaded_hashflags` folder and list all that are miss
 
 Sync hashflags with the `downloaded_hashflags` folder and download any that are missing
 ```bash
-./twitter-hashflags download
+./twitter-hashflags sync
 ```
 
 ### Force download

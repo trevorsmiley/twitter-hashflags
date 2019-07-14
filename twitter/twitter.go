@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"sort"
+	"strings"
 	"twitter-hashflags/hashflag"
 
 	"golang.org/x/net/html"
@@ -20,7 +21,7 @@ type InitData struct {
 	ActiveHashflags map[string]string `json:"activeHashflags"`
 }
 
-func GetHashflagsFromTwitter() (map[string]hashflag.Hashflag, error) {
+func GetHashflagsFromTwitter() ([]hashflag.Hashflag, error) {
 	resp, err := http.Get(twitterURL)
 	if err != nil {
 		log.Fatalf("Couldn't fetch %s\n%v\n", twitterURL, err)
@@ -29,13 +30,13 @@ func GetHashflagsFromTwitter() (map[string]hashflag.Hashflag, error) {
 	defer func() {
 		err := resp.Body.Close()
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal("Error closing body", err)
 		}
 	}()
 
 	root, err := html.Parse(resp.Body)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Error parsing body", err)
 	}
 	element, ok := getElementById(twitterHashflagTag, root)
 	if !ok {
@@ -69,31 +70,42 @@ func getActiveHashflags(s string) InitData {
 	hf := InitData{}
 	err := json.Unmarshal([]byte(s), &hf)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Error unmarshaling active hashflags", err)
 	}
 	return hf
 }
 
-func groupHashflags(hashflags InitData) map[string]hashflag.Hashflag {
+func groupHashflags(hashflags InitData) []hashflag.Hashflag {
 	grouped := make(map[string]hashflag.Hashflag)
 	for hashtag, uri := range hashflags.ActiveHashflags {
-		if hf, ok := grouped[uri]; ok {
+		filename := hashflag.GetFileName(uri)
+		if hf, ok := grouped[filename]; ok {
 			hf.Hashtags = append(hf.Hashtags, hashtag)
-			grouped[uri] = hf
+			grouped[filename] = hf
 		} else {
 			u, _ := url.Parse(uri)
-			grouped[uri] = hashflag.Hashflag{
+			grouped[filename] = hashflag.Hashflag{
 				URL:      *u,
 				Hashtags: []string{hashtag},
 			}
 		}
 	}
 
-	for uri, hf := range grouped {
+	for filename, hf := range grouped {
 		sort.Strings(hf.Hashtags)
-		grouped[uri] = hf
+		grouped[filename] = hf
 		//fmt.Printf("%s - %s - %v\n", hf.GetName(), hf.GetFileExtension(), hf.URL.String())
 	}
-	return grouped
+
+	list := make([]hashflag.Hashflag, 0)
+	for _, hf := range grouped {
+		list = append(list, hf)
+	}
+
+	sort.Slice(list, func(i, j int) bool {
+		return strings.ToLower(list[i].GetFileName()) < strings.ToLower(list[j].GetFileName())
+	})
+
+	return list
 
 }
