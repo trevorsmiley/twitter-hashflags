@@ -1,6 +1,7 @@
 package hashflag
 
 import (
+	"html/template"
 	"log"
 	"net/url"
 	"path/filepath"
@@ -16,6 +17,19 @@ type Hashflag struct {
 	Hashtags []string
 	Name     string
 	Filename string
+}
+
+func GetTemplate() (*template.Template, error) {
+	t := `{{ $hashflags := . }}
+Active Hashflags
+-----------------
+{{- range $index, $hashflag := $hashflags }}
+File: {{ .GetFileName }}
+URL: {{ .URL.String }}
+Hashtags: {{ len .Hashtags }}
+	{{ StringsJoin .Hashtags ", " }}
+{{end}}`
+	return template.New("hashflags.tmpl").Funcs(template.FuncMap{"StringsJoin": strings.Join}).Parse(t)
 }
 
 func (h *Hashflag) GetFileName() string {

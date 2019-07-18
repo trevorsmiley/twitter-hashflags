@@ -5,12 +5,8 @@ import (
 	"github.com/cheggaaa/pb/v3"
 	"github.com/gookit/color"
 	"github.com/trevorsmiley/fileutils"
-	"html/template"
 	"log"
 	"os"
-	"path"
-	"runtime"
-	"strings"
 	"twitter-hashflags/hashflag"
 	"twitter-hashflags/twitter"
 )
@@ -26,31 +22,60 @@ var red = color.FgRed.Render
 
 func main() {
 	if len(os.Args) != 2 {
-		log.Fatalf("Invalid arguments")
+		fmt.Println("Invalid arguments")
+		printHelp()
+		return
 	}
 
 	op := os.Args[1]
 
+	switch op {
+	case "list":
+		list(getHashflags())
+	case "list-fulldetails":
+		listFullDetails(getHashflags())
+	case "sync":
+		sync(getHashflags(), hashflagDIR)
+	case "force-download":
+		forceDownload(getHashflags(), hashflagDIR)
+	case "diff":
+		diff(getHashflags(), hashflagDIR)
+	case "help":
+		printHelp()
+	default:
+		fmt.Println("Unknown command")
+		printHelp()
+	}
+}
+
+func getHashflags() []hashflag.Hashflag {
 	hashflags, err := twitter.GetHashflagsFromTwitter()
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	fmt.Printf("Found %s active hashflags\n\n", cyan(len(hashflags)))
+	return hashflags
+}
 
-	switch op {
-	case "list":
-		list(hashflags)
-	case "list-fulldetails":
-		listFullDetails(hashflags)
-	case "sync":
-		sync(hashflags, hashflagDIR)
-	case "force-download":
-		forceDownload(hashflags, hashflagDIR)
-	case "diff":
-		diff(hashflags, hashflagDIR)
+func printHelp() {
+	oplist := []struct {
+		op   string
+		desc string
+	}{
+		{"list", "Print a list of all active hashflags"},
+		{"list-fulldetails", color.Sprintf("Write a list of all active hashflags with hashtags to %s", green(detailsFile))},
+		{"diff", color.Sprintf("List all hashflags missing in %s", green(hashflagDirPath()))},
+		{"sync", color.Sprintf("Download all missing hashflags to %s", green(hashflagDirPath()))},
+		{"force-download", color.Sprintf("<red>Clear directory</> %s and download all active hashflags", red(hashflagDirPath()))},
 	}
+	fmt.Println("Available commands:")
+	for _, op := range oplist {
+		color.Printf("\t%s: %s\n", cyan(op.op), op.desc)
+	}
+}
 
+func hashflagDirPath() string {
+	return fmt.Sprintf("%s%s", string(os.PathSeparator), hashflagDIR)
 }
 
 func forceDownload(hashflags []hashflag.Hashflag, dir string) {
@@ -61,7 +86,7 @@ func forceDownload(hashflags []hashflag.Hashflag, dir string) {
 func diff(hashflags []hashflag.Hashflag, dir string) {
 	missingHashflags := hashflag.FilterMissingHashflags(hashflags, dir)
 	numMissing := red(len(missingHashflags))
-	if len(missingHashflags) == 0{
+	if len(missingHashflags) == 0 {
 		numMissing = green(len(missingHashflags))
 	}
 	fmt.Printf("%s missing hashflags\n\n", numMissing)
@@ -88,11 +113,7 @@ func list(hashflags []hashflag.Hashflag) {
 }
 
 func listFullDetails(hashflags []hashflag.Hashflag) {
-	_, filename, _, ok := runtime.Caller(0)
-	if !ok {
-		log.Fatal("No caller information")
-	}
-	tmpl, err := template.New("hashflags.tmpl").Funcs(template.FuncMap{"StringsJoin": strings.Join}).ParseFiles(path.Dir(filename) + "/hashflag/hashflags.tmpl")
+	tmpl, err := hashflag.GetTemplate()
 	if err != nil {
 		log.Fatal("Error with template", err)
 	}

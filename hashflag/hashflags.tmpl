@@ -1,9 +1,0 @@
-{{ $hashflags := . }}
-Active Hashflags
------------------
-{{- range $index, $hashflag := $hashflags }}
-File: {{ .GetFileName }}
-URL: {{ .URL.String }}
-Hashtags: {{ len .Hashtags }}
-    {{ StringsJoin .Hashtags ", " }}
-{{end}}
