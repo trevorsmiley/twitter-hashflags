@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/cheggaaa/pb/v3"
+	"github.com/gookit/color"
 	"github.com/trevorsmiley/fileutils"
 	"html/template"
 	"log"
@@ -19,6 +20,10 @@ const (
 	detailsFile = "hashflag-list.txt"
 )
 
+var cyan = color.FgCyan.Render
+var green = color.FgGreen.Render
+var red = color.FgRed.Render
+
 func main() {
 	if len(os.Args) != 2 {
 		log.Fatalf("Invalid arguments")
@@ -30,7 +35,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("Found %d active hashflags\n", len(hashflags))
+
+	fmt.Printf("Found %s active hashflags\n\n", cyan(len(hashflags)))
 
 	switch op {
 	case "list":
@@ -54,7 +60,11 @@ func forceDownload(hashflags []hashflag.Hashflag, dir string) {
 
 func diff(hashflags []hashflag.Hashflag, dir string) {
 	missingHashflags := hashflag.FilterMissingHashflags(hashflags, dir)
-	fmt.Printf("%d Missing hashflags\n", len(missingHashflags))
+	numMissing := red(len(missingHashflags))
+	if len(missingHashflags) == 0{
+		numMissing = green(len(missingHashflags))
+	}
+	fmt.Printf("%s missing hashflags\n\n", numMissing)
 	for _, hf := range missingHashflags {
 		fmt.Printf("%s\n", hf.GetFileName())
 	}
@@ -63,8 +73,9 @@ func diff(hashflags []hashflag.Hashflag, dir string) {
 func sync(hashflags []hashflag.Hashflag, dir string) {
 	missingHashflags := hashflag.FilterMissingHashflags(hashflags, dir)
 	if len(missingHashflags) > 0 {
-		fmt.Printf("Syncing %d hashflags to /%s\n", len(missingHashflags), dir)
+		fmt.Printf("Syncing %s hashflags to /%s\n", green(len(missingHashflags)), cyan(dir))
 		downloadAll(missingHashflags, false, dir)
+		color.FgGreen.Println("Complete")
 	} else {
 		fmt.Println("No new hashflags to download")
 	}
@@ -95,7 +106,7 @@ func listFullDetails(hashflags []hashflag.Hashflag) {
 			log.Fatal("Couldn't close file", err)
 		}
 	}()
-	fmt.Printf("Writing details to %s\n", detailsFile)
+	fmt.Printf("Writing details to %s\n", cyan(detailsFile))
 	err = tmpl.Execute(f, hashflags)
 	if err != nil {
 		log.Fatal("Error executing template", err)
