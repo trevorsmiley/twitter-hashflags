@@ -5,41 +5,55 @@ Shoutout to [@JamieMagee](https://github.com/JamieMagee) and his [HashflagArchiv
 
 # Usage
 
-## List
+## Info
 
-### Get hashflag list
+### Get hashflag information list
 
 Return a list of active hashflags
 ```bash
-./twitter-hashflags list
+./twitter-hashflags info
 ```
 
-### Get hashflag list with full details
+### Write hashflag information list with full details to file
 
-Return a list of active hashflags with full details
+Write a list of active hashflags with full details to `hashflag-list.txt`
 ```bash
-./twitter-hashflags list-fulldetails
+./twitter-hashflags info -out
 ```
 
-### List missing hashflags
+### Get missing hashflags
 
-Sync hashflags with the `downloaded_hashflags` folder and list all that are missing
+Sync hashflags with the `/downloaded_hashflags` folder and list all that are missing
 ```bash
-./twitter-hashflags diff
+./twitter-hashflags info -diff
+```
+
+### Get deactivated hashflags
+
+Sync hashflags with the `downloaded_hashflags` folder and list all that are now deactivated
+```bash
+./twitter-hashflags info -deactivated
 ```
 
 ## Download
 
 ### Sync hashflags
 
-Sync hashflags with the `downloaded_hashflags` folder and download any that are missing
+Sync hashflags with the `/downloaded_hashflags` folder and download any that are missing
 ```bash
 ./twitter-hashflags sync
 ```
 
+### Sync hashflags and move deactivated
+
+Sync hashflags with the `/downloaded_hashflags` folder, download any that are missing and move all deactivated hashflags to `/deactivated`
+```bash
+./twitter-hashflags sync -m
+```
+
 ### Force download
 
-Clear the  `downloaded_hashflags` folder and download all hashflags
+Clear the  `/downloaded_hashflags` folder and download all hashflags
 ```bash
-./twitter-hashflags force-download
+./twitter-hashflags sync -force
 ```

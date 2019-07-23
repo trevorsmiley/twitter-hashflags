@@ -93,3 +93,30 @@ func FilterMissingHashflags(hashflags []Hashflag, hashflagDIR string) []Hashflag
 	SortHashflags(filtered)
 	return filtered
 }
+
+func FindDeactivatedHashflags(activeHashflags []Hashflag, hashflagDIR string) []string {
+	deactivated := make([]string, 0)
+	filenames, err := fileutils.GetFileNames(hashflagDIR)
+	imageExt := []string{".png"}
+	if err != nil {
+		log.Fatalf("Error getting filenames from %s\n%v", hashflagDIR, err)
+	}
+	for _, filename := range filenames {
+		if !utils.ContainsString(imageExt, filepath.Ext(filename)) {
+			continue
+		}
+		if !HashflagsContains(activeHashflags, filename) {
+			deactivated = append(deactivated, filename)
+		}
+	}
+	return deactivated
+}
+
+func HashflagsContains(hashflags []Hashflag, s string) bool {
+	for _, hf := range hashflags {
+		if hf.GetFileName() == s || hf.GetName() == s {
+			return true
+		}
+	}
+	return false
+}
