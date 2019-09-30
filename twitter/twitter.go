@@ -2,91 +2,64 @@ package twitter
 
 import (
 	"encoding/json"
+	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
 	"sort"
 	"strings"
+	"time"
 	"twitter-hashflags/hashflag"
-
-	"golang.org/x/net/html"
 )
 
-const (
-	twitterHashflagTag = "init-data"
-	twitterURL         = "https://www.twitter.com"
-)
-
-type InitData struct {
-	ActiveHashflags map[string]string `json:"activeHashflags"`
+type HashFlagTwitter struct {
+	CampaignName        string `json:"campaignName"`
+	Hashtag             string `json:"campaignName"`
+	AssetUrl            string `json:"assetUrl"`
+	StartingTimestampMs string `json:"startingTimestampMs"`
+	EndingTimestampMs   string `json:"endingTimestampMs"`
 }
 
 func GetHashflagsFromTwitter() ([]hashflag.Hashflag, error) {
-	resp, err := http.Get(twitterURL)
+
+	timeString := time.Now().Format("2006-01-02-03")
+	uri := fmt.Sprintf("https://pbs.twimg.com/hashflag/config-%s.json", timeString)
+	r, err := http.Get(uri)
 	if err != nil {
-		log.Fatalf("Couldn't fetch %s\n%v\n", twitterURL, err)
 		return nil, err
 	}
 	defer func() {
-		err := resp.Body.Close()
+		err := r.Body.Close()
 		if err != nil {
 			log.Fatal("Error closing body", err)
 		}
 	}()
 
-	root, err := html.Parse(resp.Body)
+	var hfs []HashFlagTwitter
+	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Fatal("Error parsing body", err)
+		return nil, err
 	}
-	element, ok := getElementById(twitterHashflagTag, root)
-	if !ok {
-		log.Fatal("element not found")
-	}
-	for _, a := range element.Attr {
-		if a.Key == "value" {
-			hashflags := getActiveHashflags(a.Val)
-			return groupHashflags(hashflags), nil
-		}
-	}
-	log.Fatal("element missing value")
-	return nil, err
-}
-
-func getElementById(id string, n *html.Node) (element *html.Node, ok bool) {
-	for _, a := range n.Attr {
-		if a.Key == "id" && a.Val == id {
-			return n, true
-		}
-	}
-	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		if element, ok = getElementById(id, c); ok {
-			return
-		}
-	}
-	return
-}
-
-func getActiveHashflags(s string) InitData {
-	hf := InitData{}
-	err := json.Unmarshal([]byte(s), &hf)
+	err = json.Unmarshal(body, &hfs)
 	if err != nil {
-		log.Fatal("Error unmarshaling active hashflags", err)
+		return nil, err
 	}
-	return hf
+	return groupHashflags(hfs), err
 }
 
-func groupHashflags(hashflags InitData) []hashflag.Hashflag {
+func groupHashflags(hashflags []HashFlagTwitter) []hashflag.Hashflag {
 	grouped := make(map[string]hashflag.Hashflag)
-	for hashtag, uri := range hashflags.ActiveHashflags {
-		filename := hashflag.GetFileName(uri)
+	for _, hashf := range hashflags {
+		filename := hashflag.GetFileName(hashf.AssetUrl)
 		if hf, ok := grouped[filename]; ok {
-			hf.Hashtags = append(hf.Hashtags, hashtag)
+			hf.Hashtags = append(hf.Hashtags, hashf.Hashtag)
 			grouped[filename] = hf
 		} else {
-			u, _ := url.Parse(uri)
+			u, _ := url.Parse(hashf.AssetUrl)
 			grouped[filename] = hashflag.Hashflag{
 				URL:      *u,
-				Hashtags: []string{hashtag},
+				Hashtags: []string{hashf.Hashtag},
 			}
 		}
 	}
@@ -107,5 +80,4 @@ func groupHashflags(hashflags InitData) []hashflag.Hashflag {
 	})
 
 	return list
-
 }

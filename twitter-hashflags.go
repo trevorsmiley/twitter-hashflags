@@ -15,6 +15,7 @@ const (
 	hashflagDIR    = "downloaded_hashflags"
 	deactivatedDIR = "deactivated"
 	detailsFile    = "hashflag-list.txt"
+	htmlFile       = "hashflags.html"
 )
 
 var cyan = color.FgCyan.Render
@@ -29,6 +30,7 @@ func main() {
 	fullDetails := listCommand.Bool("out", false, "write full details to file")
 	fileDiff := listCommand.Bool("diff", false, "diff")
 	deactivated := listCommand.Bool("deactivated", false, "deactivated")
+	htmlPage := listCommand.Bool("html", false, "create local html page")
 
 	//sync
 	syncCommand := flag.NewFlagSet("sync", flag.ExitOnError)
@@ -51,7 +53,7 @@ func main() {
 	}
 
 	if listCommand.Parsed() {
-		hashflag.Info(getHashflags(), hashflagDIR, detailsFile, *fullDetails, *deactivated, *fileDiff)
+		hashflag.Info(getHashflags(), hashflagDIR, detailsFile, htmlFile, *fullDetails, *deactivated, *fileDiff, *htmlPage)
 	}
 	if syncCommand.Parsed() {
 		hashflag.Sync(getHashflags(), hashflagDIR, deactivatedDIR, *moveInactive, *force)
@@ -66,6 +68,7 @@ func printHelp() {
 	}{
 		{"info", "Print a list of all active hashflags", false},
 		{"-out", color.Sprintf("Write a list of all active hashflags with hashtags to %s", green(detailsFile)), true},
+		{"-html", color.Sprintf("Generate an html file (%s) to view all active hashflags directly from Twitter", green(htmlFile)), true},
 		{"-diff", color.Sprintf("List only hashflags missing in %s", green(hashflagDirPath())), true},
 		{"-deactivated", color.Sprintf("List only deactivated files that are in %s", green(hashflagDirPath())), true},
 		{"sync", color.Sprintf("Download all missing hashflags to %s", green(hashflagDirPath())), false},

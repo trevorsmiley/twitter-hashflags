@@ -19,7 +19,7 @@ type Hashflag struct {
 	Filename string
 }
 
-func GetTemplate() (*template.Template, error) {
+func GetTextOutputTemplate() (*template.Template, error) {
 	t := `{{ $hashflags := . }}
 Active Hashflags
 -----------------
@@ -29,7 +29,23 @@ URL: {{ .URL.String }}
 Hashtags: {{ len .Hashtags }}
 	{{ StringsJoin .Hashtags ", " }}
 {{end}}`
-	return template.New("hashflags.tmpl").Funcs(template.FuncMap{"StringsJoin": strings.Join}).Parse(t)
+	return getTemplate(t, "hashflags.tmpl")
+}
+
+func GetHtmlTemplate() (*template.Template, error) {
+	t := `{{ $hashflags := . }}
+<html>
+<body>
+{{- range $index, $hashflag := $hashflags }}
+<img src="{{ .URL.String }}" title="{{ .GetFileName }}: {{ StringsJoin .Hashtags ", " }}"/>
+{{end}}
+</body>
+</html>`
+	return getTemplate(t, "html.tmpl")
+}
+
+func getTemplate(tmpl, name string) (*template.Template, error) {
+	return template.New(name).Funcs(template.FuncMap{"StringsJoin": strings.Join}).Parse(tmpl)
 }
 
 func (h *Hashflag) GetFileName() string {

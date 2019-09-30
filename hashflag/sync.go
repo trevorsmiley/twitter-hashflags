@@ -72,10 +72,15 @@ func downloadAll(hashflags []Hashflag, clearDIR bool, dir string) {
 		hf.Download(dir)
 	}
 	bar.Finish()
+	for _, hf := range hashflags{
+		color.Printf("%s\n", green(hf.GetFileName()))
+	}
 }
 
 func moveFiles(filenames []string, oldDIR, newDIR string) error {
+	fmt.Println("Moving...")
 	for _, filename := range filenames {
+		color.Red.Println(filename)
 		err := os.Rename(filepath.Join(oldDIR, filename), filepath.Join(newDIR, filename))
 		if err != nil {
 			return err

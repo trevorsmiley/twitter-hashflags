@@ -2,18 +2,20 @@ package hashflag
 
 import (
 	"fmt"
+	"html/template"
 	"log"
 	"os"
 )
 
-func Info(hashflags []Hashflag, hashflagDIR, detailsFile string, fullDetails, deactivated, fileDiff bool) {
+func Info(hashflags []Hashflag, hashflagDIR, detailsFile, htmlFile string, fullDetails, deactivated, fileDiff, htmlPage bool) {
 	if fileDiff {
 		diff(hashflags, hashflagDIR)
 	} else if fullDetails {
 		listFullDetails(hashflags, detailsFile)
-
 	} else if deactivated {
 		listDeactivated(hashflags, hashflagDIR)
+	}else if htmlPage {
+		buildLocalPage(hashflags, htmlFile)
 	} else {
 		for _, hf := range hashflags {
 			fmt.Printf("%s\n", hf.GetFileName())
@@ -21,14 +23,18 @@ func Info(hashflags []Hashflag, hashflagDIR, detailsFile string, fullDetails, de
 	}
 }
 
-func listFullDetails(hashflags []Hashflag, detailsFile string) {
-	tmpl, err := GetTemplate()
-	if err != nil {
-		log.Fatal("Error with template", err)
+func buildLocalPage(hashflags []Hashflag, htmlFile string){
+	tmpl, err := GetHtmlTemplate()
+	if err != nil{
+		log.Fatal("HTML template error", err)
 	}
-	f, err := os.Create(detailsFile)
+	writeTemplateToFile(htmlFile, tmpl, hashflags)
+}
+
+func writeTemplateToFile(fileName string, tmpl *template.Template, hashflags []Hashflag) {
+	f, err := os.Create(fileName)
 	if err != nil {
-		log.Fatalf("Couldn't create file %s\n%v", detailsFile, err)
+		log.Fatal("Couldn't create file %s\n%v", fileName, err)
 	}
 	defer func() {
 		err = f.Close()
@@ -36,11 +42,19 @@ func listFullDetails(hashflags []Hashflag, detailsFile string) {
 			log.Fatal("Couldn't close file", err)
 		}
 	}()
-	fmt.Printf("Writing details to %s\n", cyan(detailsFile))
+	fmt.Printf("Writing details to %s\n", cyan(fileName))
 	err = tmpl.Execute(f, hashflags)
 	if err != nil {
 		log.Fatal("Error executing template", err)
 	}
+}
+
+func listFullDetails(hashflags []Hashflag, detailsFile string) {
+	tmpl, err := GetTextOutputTemplate()
+	if err != nil {
+		log.Fatal("Error with template", err)
+	}
+	writeTemplateToFile(detailsFile, tmpl, hashflags)
 }
 
 func diff(hashflags []Hashflag, dir string) {
