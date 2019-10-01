@@ -15,7 +15,7 @@ import (
 
 type HashFlagTwitter struct {
 	CampaignName        string `json:"campaignName"`
-	Hashtag             string `json:"campaignName"`
+	Hashtag             string `json:"hashtag"`
 	AssetUrl            string `json:"assetUrl"`
 	StartingTimestampMs string `json:"startingTimestampMs"`
 	EndingTimestampMs   string `json:"endingTimestampMs"`
