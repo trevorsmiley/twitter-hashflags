@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/gookit/color"
+	"github.com/trevorsmiley/fileutils"
 	"log"
 	"os"
 	"path/filepath"
@@ -50,6 +51,11 @@ func main() {
 		}
 	default:
 		printHelp()
+	}
+
+	err := fileutils.CreateDirIfMissing(hashflagDIR)
+	if err != nil {
+		log.Fatalf("Error creating folder %s\n%v", hashflagDIR, err)
 	}
 
 	if listCommand.Parsed() {
