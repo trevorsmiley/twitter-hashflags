@@ -22,13 +22,26 @@ type HashFlagTwitter struct {
 }
 
 func GetHashflagsFromTwitter() ([]hashflag.Hashflag, error) {
+	loc, _ := time.LoadLocation("UTC")
+	now := time.Now().In(loc)
 
-	timeString := time.Now().Format("2006-01-02-03")
+	hourFlags, err := GetHashFlagsUnmarshalled(now.Format("2006-01-02-15"))
+	dayFlags, err := GetHashFlagsUnmarshalled(now.Format("2006-01-02"))
+
+	allFlags := append(dayFlags, hourFlags...)
+	if len(allFlags) == 0 {
+		return nil, err
+	}
+	return groupHashflags(allFlags), nil
+}
+
+func GetHashFlagsUnmarshalled(timeString string) ([]HashFlagTwitter, error) {
 	uri := fmt.Sprintf("https://pbs.twimg.com/hashflag/config-%s.json", timeString)
 	r, err := http.Get(uri)
 	if err != nil {
 		return nil, err
 	}
+	fmt.Printf("Timestring used: %s\n", timeString)
 	defer func() {
 		err := r.Body.Close()
 		if err != nil {
@@ -45,7 +58,7 @@ func GetHashflagsFromTwitter() ([]hashflag.Hashflag, error) {
 	if err != nil {
 		return nil, err
 	}
-	return groupHashflags(hfs), err
+	return hfs, nil
 }
 
 func groupHashflags(hashflags []HashFlagTwitter) []hashflag.Hashflag {
